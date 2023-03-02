@@ -7,14 +7,28 @@ from os import getenv
 
 class vkBOT():
     session = None
-    def __init__(self):
+    def __init__(self, db):
         self.session = vk_api.VkApi(token=getenv('token'))
         self.longpoll = VkLongPoll(self.session)
+        self.db = db
 
     def write_msg(self, user_id, message):
         self.session.method('messages.send',
                             {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7), })
-    def get_user_profile(self,user_id):
+
+    def register_client_profile(self,user_id):
+        #нужно по ID вытащить критерии поиска
+        #
+        pass
+
+    def search_by_client_criteria(self,Client_id):
+        pass
+
+    def get_next_in_searchResults(self,ClientID):
+
+        pass
+
+    def set_like_dislike(self,clientID,like=False):
         pass
 
     def run(self):
@@ -32,7 +46,6 @@ class vkBOT():
 
 
 if __name__ == '__main__':
-    # bd = BotDB()
-    # bd.create_tables()
-    vkbot = vkBOT()
+    bd = BotDB()
+    vkbot = vkBOT(bd)
     vkbot.run()

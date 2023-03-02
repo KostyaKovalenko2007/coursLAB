@@ -9,7 +9,8 @@ class Client(Base):
     __tablename__ = 'clients'
     id = Column(Integer, primary_key=True)
     vkID = Column(String,unique=True)
-    creteria = Column(JSON)
+    creteria = Column(JSON) #{"city:"","age":"","gender":"", "other":""}
+
 
     def __init__(self, client_id:str,creteria:json):
         self.vkID = client_id
