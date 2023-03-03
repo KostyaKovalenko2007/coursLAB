@@ -1,7 +1,8 @@
 import vk_api
-from vk_access_token import access_token
+from os import getenv
 
-vk = vk_api.VkApi(token=access_token)
+
+vk = vk_api.VkApi(token=getenv('token'))
 session_api = vk.get_api()
 
 SEX = 1
