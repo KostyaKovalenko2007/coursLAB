@@ -7,10 +7,13 @@ from os import getenv
 
 class vkBOT():
     session = None
-    def __init__(self, db):
+    api = None
+    db: BotDB = None
+    def __init__(self, db:BotDB):
         self.session = vk_api.VkApi(token=getenv('token'))
         self.longpoll = VkLongPoll(self.session)
         self.db = db
+        self.api = self.session.get_api()
 
     def write_msg(self, user_id, message):
         self.session.method('messages.send',
@@ -29,6 +32,7 @@ class vkBOT():
         pass
 
     def set_like_dislike(self,clientID,like=False):
+
         pass
 
     def run(self):
