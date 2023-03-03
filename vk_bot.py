@@ -51,5 +51,6 @@ class vkBOT():
 
 if __name__ == '__main__':
     bd = BotDB()
+    bd.create_tables()
     vkbot = vkBOT(bd)
     vkbot.run()
