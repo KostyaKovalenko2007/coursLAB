@@ -1,14 +1,15 @@
+import os
 from random import randrange
 import vk_api
+import json
 from vk_api.longpoll import VkLongPoll, VkEventType
 from db import Client, SearchResult, Favorite, BotDB
-from os import getenv
 
 
 class vkBOT():
     session = None
     def __init__(self, db):
-        self.session = vk_api.VkApi(token=getenv('token'))
+        self.session = vk_api.VkApi(token=os.getenv('token'))
         self.longpoll = VkLongPoll(self.session)
         self.db = db
 
@@ -16,9 +17,12 @@ class vkBOT():
         self.session.method('messages.send',
                             {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7), })
 
-    def register_client_profile(self,user_id):
-        #нужно по ID вытащить критерии поиска
-        #
+    def register_client_profile(self, user_id):
+        vkapi = self.session.get_api()
+        info = vkapi.users.get(user_ids=user_id, fields='city, sex, bdate')
+        criteria = json.dumps(info[0])
+        self.db.
+        print(criteria)
         pass
 
     def search_by_client_criteria(self,Client_id):
@@ -34,9 +38,12 @@ class vkBOT():
     def run(self):
         for event in self.longpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW:
-                if event.to_me:
+               if event.to_me:
+                    self.register_client_profile(event.user_id)
                     request = event.text
-                    print(event.user_id,event.text)
+                    print(event.user_id, event.text)
+
+
                     if request == "привет":
                         self.write_msg(event.user_id, f"Хай, {event.user_id}")
                     elif request == "пока":
