@@ -21,7 +21,6 @@ class vkBOT():
         vkapi = self.session.get_api()
         info = vkapi.users.get(user_ids=user_id, fields='city, sex, bdate')
         criteria = json.dumps(info[0])
-        self.db.
         print(criteria)
         pass
 
