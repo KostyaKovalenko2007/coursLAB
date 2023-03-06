@@ -1,9 +1,19 @@
 from sqlalchemy import Column, Integer, String, create_engine, ForeignKey,Boolean,JSON
 from sqlalchemy.orm import sessionmaker,declarative_base
-from os import getenv
+# from os import getenv
 import json
 Base = declarative_base()
 
+
+DIALECT = 'postgresql'
+USERNAME = 'postgres'
+PASSWORD = 'dimkanet'
+HOST = 'localhost'
+PORT = 5432
+DATABASE = 'VKBOT'
+
+# dialect+driver://username:password@host:port/database
+DSN = f"{DIALECT}://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
 
 class Client(Base):
     __tablename__ = 'clients'
@@ -76,7 +86,7 @@ class BotDB():
     def __init__(self):
         #engine = create_engine("postgresql://vk_bot_lab:Qw123456@192.168.88.4/vkbot")
         #Session = sessionmaker(bind=engine)
-        DSN = getenv('dsn')
+        # DSN = getenv('dsn')
         self.engine = create_engine(DSN)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
