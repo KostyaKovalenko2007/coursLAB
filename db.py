@@ -25,8 +25,7 @@ class Client(Base):
     def get_current(self):
         return self.currentSearchID
 
-    def set_serchID(self,id):
-        self.currentSearchID=id
+
 
 
 class SearchResult(Base):
@@ -40,7 +39,7 @@ class SearchResult(Base):
     img3 = Column(String)
 
     def __str__(self):
-        return f"{self.name} - {self.vkID}"
+        return f"{self.clientID} - {self.vkID}"
     def view(self):
         # формирует  cловарик с ответа ботом
         pass
@@ -59,10 +58,6 @@ class SearchResult(Base):
         # не добавляет которые уже помечены как Like/Dislike (если такие попадутся)
         pass
 
-    def get_next_searchID(self):
-        # метод возвращает следующий идентификатор профиля из поискового запроса двигаясь последовательно перебирая профили по поисковому запросу
-        # возвращает следующий профиль и меняет сслыку currentSearchID
-        pass
 
 
 class Favorite(Base):
@@ -124,7 +119,7 @@ class BotDB():
         self.session.commit()
 
     def get_client_by_vkID(self, vkID: str):
-        return self.session.query(Client(vkID=str(vkID))).first()
+        return self.session.query(Client).filter(Client.vkID==str(vkID)).first()
 
     def put_search(self, ClientID: Client, SearchResults: list):
         # Удаляет предыдущий поиск из таблицы SearchResults для клиента
@@ -141,3 +136,6 @@ class BotDB():
             self.session.add(item)
         self.session.commit()
         pass
+    def set_searchID(self,ClientID:str,id:int):
+        self.session.query(Client).filter(Client.vkID == str(ClientID)).update({Client.currentSearchID: id})
+        self.session.commit()
