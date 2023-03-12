@@ -27,9 +27,9 @@ class vkBOT():
 
     def send_profile(self,user_id,profile:dict,keyboard):
         print(profile.get('fio'),profile.get('img1'))
-        #pic1 = self.upload.photo_messages(profile.get('img1'))
-        pic1 = self.upload.photo_messages("/Users/air/Downloads/VzazMS50ug4.jpeg", peer_id=64049236)
-        print(pic1)
+        #pic1 = self.upload.photo_messages("/Users/air/Downloads/VzazMS50ug4.jpeg", peer_id=64049236)
+        #print(pic1)
+        self.write_msg(user_id=user_id,message=f"{profile.get('fio')}\n{profile.get('img1')}",keyboard=keyboard)
 
     def write_msg(self, user_id, message, keyboard=None):
         post = {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7)}
@@ -39,12 +39,35 @@ class vkBOT():
 
     def register_client_profile(self, user_id):
         info = self.api.users.get(user_ids=user_id, fields='city, sex, bdate')[0]
-        if info.get('sex') == 1:
-            info['sex'] = 2
-        elif info.get('sex') == 2:
-            info['sex'] = 1
+        bot_user = {'id': info['id'],
+                    'citi_id': info['city']['id'],
+                    'city_title': info['city']['title'],
+                    'sex': info['sex'],
+                    'bdate': info.get('bdate'),
+                    'first_name': info['first_name'],
+                    'last_name': info['last_name'],
+                    'can_access_closed': info['can_access_closed']}
+        if bot_user['sex'] == 1:
+            bot_user['sex_find'] = 2
+        else:
+            bot_user['sex_find'] = 1
 
-        result, msg = self.db.create_client(vkID=user_id, creteria=json.dumps(info))
+        if bot_user['bdate'] != None:
+            bot_user_bdate = bot_user['bdate'].split('.')
+        else:
+            bot_user_bdate=[1,1,2000]
+
+        # Укажем критерии поиска людей +/-10 лет, если указан возраст
+        if len(bot_user_bdate) == 3:
+            bot_user['age_from'] = 2023 - bot_user_bdate[2] - 10
+            if bot_user['age_from'] < 18:
+                bot_user['age_from'] = 18
+            bot_user['age_to'] = bot_user['age_from'] + 10
+        else:
+            bot_user['age_from'] = 18
+            bot_user['age_to'] = 40
+
+        result, msg = self.db.create_client(vkID=user_id, creteria=json.dumps(bot_user))
         print(msg)
         return result
 
@@ -54,10 +77,10 @@ class vkBOT():
         creteria = self.db.get_client_criterias(vkID=Client_id)
 
         params = {'count': 20,
-                  'city': creteria['city'].get('id'),
-                  'sex': creteria['sex'],
-                  # 'age_from': AGE_FROM, #TODO надо подять как обрабатывать возраст
-                  # 'age_to': AGE_TO,
+                  'city': creteria['citi_id'],
+                  'sex': creteria['sex_find'],
+                  'age_from': creteria['age_from'],
+                  'age_to': creteria['age_to'],
                   'fields': 'can_write_private_message',
                   'has_photo': 1}
         users = self.priv_api.users.search(**params)
@@ -71,8 +94,6 @@ class vkBOT():
                                     'photos': photos
                                     })
         self.db.put_search(ClientID=Client_id, SearchResults=search_list)
-
-        pass
 
     def get_next_in_searchResults(self, ClientID):
         # возвращает следующий профиль из поисковых результатов
@@ -114,9 +135,10 @@ class vkBOT():
                         self.write_msg(event.user_id, "Вас зарегистрировали", None)
                         self.write_msg(event.user_id,
                                        "Ваши поисковые критерии:\n" \
-                                       f"Город: {info['city'].get('title')}\n" \
-                                       f"Пол: {self.sex[info.get('sex')]}\n" \
-                                       f"Возраст: {info.get('bdate')}", None)
+                                       f"Город: {info.get('city_title')}\n" \
+                                       f"Пол: {self.sex[info.get('sex_find')]}\n" \
+                                       f"Возраст c: {info.get('age_from')}\n"\
+                                       f"Возраст по: {info.get('age_to')}", None)
                         keyboard = VkKeyboard()
                         keyboard.add_button("Введите город", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Введите возраст", VkKeyboardColor.POSITIVE)
@@ -157,7 +179,7 @@ class vkBOT():
 
 if __name__ == '__main__':
     bd = BotDB()
-    # bd.create_tables() # раскоментировать для инициализации базы
+    #bd.create_tables() # раскоментировать для инициализации базы
     vkbot = vkBOT(bd)
     vkbot.run()
     #vkbot.get_user_photos(vkID=64049236)

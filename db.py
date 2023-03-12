@@ -162,7 +162,8 @@ class BotDB():
             item = self.session.query(SearchResult) \
                 .filter(SearchResult.clientID == client.id) \
                 .filter(~ exists().where(
-                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False))
+                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False))\
+                .first()
         else:
             #выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
             item = self.session.query(SearchResult) \
