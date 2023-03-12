@@ -3,6 +3,7 @@ import os
 from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON, exists
 from sqlalchemy.orm import sessionmaker, declarative_base, Query
 # from os import getenv
+from settings import DSN
 import json
 
 Base = declarative_base()
@@ -87,7 +88,8 @@ class BotDB():
         # engine = create_engine("postgresql://vk_bot_lab:Qw123456@192.168.88.4/vkbot")
         # Session = sessionmaker(bind=engine)
         # DSN = getenv('dsn')
-        self.engine = create_engine(os.getenv('dsn'))
+        # self.engine = create_engine(os.getenv('dsn'))
+        self.engine = create_engine(DSN)
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
 
@@ -100,12 +102,19 @@ class BotDB():
 
     def create_client(self, vkID, creteria: json):
         client = Client(client_id=vkID, creteria=creteria)
-        try:
-            self.session.add(client)
-            self.session.commit()
+
+        res = self.session.query(Client).filter(Client.vkID == str(vkID)).one()
+        print(res)
+        if res == 0:
+            try:
+                self.session.add(client)
+                self.session.commit()
+                return 1, "Client registered"
+            except:
+                return 0, f"Can't create record for\n VKID={vkID}\n Criteria={creteria} "
+        else:
+            print('Профиль уже зарегистирован')
             return 1, "Client registered"
-        except:
-            return 0, f"Can't create record for\n VKID={vkID}\n Criteria={creteria} "
 
     def get_client_criterias(self, vkID):
         res: Query = self.session.query(Client).filter(Client.vkID == str(vkID))
@@ -159,10 +168,12 @@ class BotDB():
 
     def get_next_profile(self, client: Client):
         if client.currentSearchID == None: # если первый раз то просто запрос
-            item = self.session.query(SearchResult) \
-                .filter(SearchResult.clientID == client.id) \
-                .filter(~ exists().where(
-                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False))
+            # item = self.session.query(SearchResult) \
+            #     .filter(SearchResult.clientID == client.id) \
+            #     .filter(~ exists().where(
+            #     SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False))
+            item = self.session.query(SearchResult).where(SearchResult.clientID == client.id).first()
+                # .filter(SearchResult.clientID == client.id)
         else:
             #выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
             item = self.session.query(SearchResult) \
@@ -173,6 +184,7 @@ class BotDB():
                                and Favorite.ClientID == client.id \
                                and Favorite.like == False)) \
                 .first()
+        # self.set_searchID(client=client, id=item.id)
         self.set_searchID(client=client, id=item.id)
         return {'fio': item.fio,
                 'profile': f"https://vk.com/id{item.vkID}",

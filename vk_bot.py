@@ -6,6 +6,9 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor, VkKeyboardButton
 from db import Client, SearchResult, Favorite, BotDB
 from os import getenv
+from settings import GROUP_ID, GROUP_TOKEN, USER_TOKEN, API_VERSION
+from vk_api import VkUpload
+import requests
 
 
 
@@ -15,21 +18,46 @@ class vkBOT():
     db: BotDB = None
     sex = {1: 'Женский', 2: 'Мужской'}
     priv_api = None
+    vk_upload = None
 
     def __init__(self, db: BotDB):
-        self.session = vk_api.VkApi(token=getenv('token'))
+        # self.session = vk_api.VkApi(token=getenv('token'))
+        self.session = vk_api.VkApi(token=GROUP_TOKEN)
         self.longpoll = VkLongPoll(self.session)
         self.db: BotDB = db
         self.vk = self.session.get_api()
         self.api = self.session.get_api()
-        self.priv_api = vk_api.VkApi(token=getenv('priv_token')).get_api()
-        self.upload = vk_api.VkUpload(self.session)
+        # self.priv_api = vk_api.VkApi(token=getenv('priv_token')).get_api()
+        self.priv_api = vk_api.VkApi(token=USER_TOKEN).get_api()
+        # self.upload = vk_api.VkUpload(self.session)
+        self.vk_upload = vk_api.VkApi(token=USER_TOKEN)
+        self.upload = VkUpload(self.vk_upload)
 
     def send_profile(self,user_id,profile:dict,keyboard):
-        print(profile.get('fio'),profile.get('img1'))
+        # print(profile.get('fio'),profile.get('img1'))
+
+        fotos = []
+        if profile.get('img1'):
+            fotos.append(profile.get('img1'))
+        if profile.get('img2'):
+            fotos.append(profile.get('img2'))
+        if profile.get('img3'):
+            fotos.append(profile.get('img3'))
+        message = f"{profile.get('fio')} {profile.get('profile')}"
+
+        attachments = []
+        session = requests.Session()
+        for foto in fotos:
+            image = session.get(foto, stream=True)
+            photo = self.upload.photo_messages(photos=image.raw)[0]
+            attachments.append('photo{}_{}_{}'.format(photo['owner_id'], photo['id'], photo['access_key']))
+        post = {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7), 'attachment': ','.join(attachments)}
+        if keyboard:
+            post["keyboard"] = keyboard.get_keyboard()
+        self.session.method('messages.send', post)
         #pic1 = self.upload.photo_messages(profile.get('img1'))
-        pic1 = self.upload.photo_messages("/Users/air/Downloads/VzazMS50ug4.jpeg", peer_id=64049236)
-        print(pic1)
+        # pic1 = self.upload.photo_messages("/Users/air/Downloads/VzazMS50ug4.jpeg", peer_id=64049236)
+        # print(pic1)
 
     def write_msg(self, user_id, message, keyboard=None):
         post = {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7)}
