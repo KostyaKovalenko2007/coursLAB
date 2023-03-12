@@ -10,6 +10,7 @@ from os import getenv
 
 
 class vkBOT():
+    #test changes
     session = None
     api = None
     db: BotDB = None
