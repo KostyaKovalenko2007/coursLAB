@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON, exists
+from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON, exists, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base, Query
 # from os import getenv
 import json
@@ -92,10 +92,11 @@ class BotDB():
         self.session = Session()
 
     def create_tables(self):
-        Base.metadata.drop_all(self.engine)
-        print('Tables cleaned')
-        Base.metadata.create_all(self.engine)
-        print('Tables created')
+        if not inspect(self.engine).has_table("clients"):
+            Base.metadata.drop_all(self.engine)
+            print('Tables cleaned')
+            Base.metadata.create_all(self.engine)
+            print('Tables created')
         pass
 
     def create_client(self, vkID, creteria: json):
@@ -103,9 +104,9 @@ class BotDB():
         try:
             self.session.add(client)
             self.session.commit()
-            return 1, "Client registered"
+            return True, "Client registered"
         except:
-            return 0, f"Can't create record for\n VKID={vkID}\n Criteria={creteria} "
+            return False, f"Can't create record for\n VKID={vkID}\n Criteria={creteria} "
 
     def get_client_criterias(self, vkID):
         res: Query = self.session.query(Client).filter(Client.vkID == str(vkID))

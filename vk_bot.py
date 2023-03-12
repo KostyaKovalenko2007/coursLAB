@@ -130,19 +130,28 @@ class vkBOT():
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
                         self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id), keyboard)
                     elif request == "Регистрация":
-                        self.register_client_profile(user_id=event.user_id)
-                        info = self.db.get_client_criterias(vkID=str(event.user_id))
-                        self.write_msg(event.user_id, "Вас зарегистрировали", None)
-                        self.write_msg(event.user_id,
-                                       "Ваши поисковые критерии:\n" \
-                                       f"Город: {info.get('city_title')}\n" \
-                                       f"Пол: {self.sex[info.get('sex_find')]}\n" \
-                                       f"Возраст c: {info.get('age_from')}\n"\
-                                       f"Возраст по: {info.get('age_to')}", None)
-                        keyboard = VkKeyboard()
-                        keyboard.add_button("Введите город", VkKeyboardColor.POSITIVE)
-                        keyboard.add_button("Введите возраст", VkKeyboardColor.POSITIVE)
-                        # self.write_msg(event.user_id, "button", keyboard)
+                        res , msg = self.register_client_profile(user_id=event.user_id)
+                        if res:
+                            info = self.db.get_client_criterias(vkID=str(event.user_id))
+                            keyboard = VkKeyboard()
+                            self.write_msg(event.user_id, "Вас зарегистрировали", None)
+                            self.write_msg(event.user_id,
+                                           "Ваши поисковые критерии:\n" \
+                                           f"Город: {info.get('city_title')}\n" \
+                                           f"Пол: {self.sex[info.get('sex_find')]}\n" \
+                                           f"Возраст c: {info.get('age_from')}\n" \
+                                           f"Возраст по: {info.get('age_to')}", None)
+                        else:
+                            info = self.db.get_client_criterias(vkID=str(event.user_id))
+                            keyboard = VkKeyboard()
+                            self.write_msg(event.user_id, "Вы уже были зарегистрированы", None)
+                            self.write_msg(event.user_id,
+                                           "Ваши поисковые критерии:\n" \
+                                           f"Город: {info.get('city_title')}\n" \
+                                           f"Пол: {self.sex[info.get('sex_find')]}\n" \
+                                           f"Возраст c: {info.get('age_from')}\n" \
+                                           f"Возраст по: {info.get('age_to')}", None)
+
                     elif request == "Следующее":
                         keyboard = VkKeyboard(inline=True)
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
@@ -179,7 +188,7 @@ class vkBOT():
 
 if __name__ == '__main__':
     bd = BotDB()
-    #bd.create_tables() # раскоментировать для инициализации базы
+    bd.create_tables() # раскоментировать для инициализации базы
     vkbot = vkBOT(bd)
     vkbot.run()
     #vkbot.get_user_photos(vkID=64049236)
