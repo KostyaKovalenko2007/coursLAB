@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON, exists
 from sqlalchemy.orm import sessionmaker, declarative_base, Query
 # from os import getenv
 import json
@@ -22,10 +22,9 @@ class Client(Base):
 
     def __repr__(self):
         return f'<{self.__class__.__name__} #{self.id}>'
+
     def get_current(self):
         return self.currentSearchID
-
-
 
 
 class SearchResult(Base):
@@ -40,9 +39,11 @@ class SearchResult(Base):
 
     def __str__(self):
         return f"{self.clientID} - {self.vkID}"
+
     def view(self):
         # формирует  cловарик с ответа ботом
         pass
+
     def __init__(self, ClientID, vkID, fio, imgs=[]):
         self.vkID = vkID
         self.clientID = ClientID
@@ -59,7 +60,6 @@ class SearchResult(Base):
         pass
 
 
-
 class Favorite(Base):
     __tablename__ = 'Favorites'
     id = Column(Integer, primary_key=True)
@@ -67,9 +67,9 @@ class Favorite(Base):
     SearchID = Column(Integer, ForeignKey("SearchResults.id"))
     like = Column(Boolean, default=True)
 
-    def __init__(self, serch_item: SearchResult, like=True):
-        self.ClientID = serch_item.id
-        self.SearchID = serch_item.vkID
+    def __init__(self, client: Client, like=True):
+        self.ClientID = client.id
+        self.SearchID = client.currentSearchID
         self.like = like
 
     def __repr__(self):
@@ -119,23 +119,63 @@ class BotDB():
         self.session.commit()
 
     def get_client_by_vkID(self, vkID: str):
-        return self.session.query(Client).filter(Client.vkID==str(vkID)).first()
+        return self.session.query(Client).filter(Client.vkID == str(vkID)).one()
 
-    def put_search(self, ClientID: Client, SearchResults: list):
+    def put_search(self, ClientID: str, SearchResults: list):
         # Удаляет предыдущий поиск из таблицы SearchResults для клиента
         # обнуляет
-        client = self.session.query(Client).filter(Client.vkID == str(ClientID)).first()
-        self.session.query(SearchResult).filter(
-            SearchResult.clientID==client.id).delete()  # TODO нужно исключить имеющиеся завписи в Favorites
+        client = self.get_client_by_vkID(vkID=ClientID)
+        client.currentSearchID = None
+        self.session.commit()
+        self.session.query(SearchResult) \
+            .filter(SearchResult.clientID == client.id) \
+            .filter(~ exists().where(SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id)) \
+            .delete()
         for profile in SearchResults:
             item = SearchResult(ClientID=client.id,
-                                    vkID=str(profile['id']),
-                                    fio=f'{profile["first_name"]} {profile["last_name"]}',
-                                    imgs=list(profile['photos'])
+                                vkID=str(profile['id']),
+                                fio=f'{profile["first_name"]} {profile["last_name"]}',
+                                imgs=list(profile['photos'])
                                 )
             self.session.add(item)
         self.session.commit()
         pass
-    def set_searchID(self,ClientID:str,id:int):
-        self.session.query(Client).filter(Client.vkID == str(ClientID)).update({Client.currentSearchID: id})
+
+    def set_searchID(self, client: Client, id: int):
+        client.currentSearchID = id
         self.session.commit()
+
+    def set_like(self, client: Client, like: Boolean):
+        favorite = self.session.query(Favorite) \
+            .filter(Favorite.ClientID == client.id) \
+            .filter(Favorite.SearchID == client.currentSearchID).first()
+        if favorite == None:
+            favorite = Favorite(client=client, like=like)
+            self.session.add(favorite)
+            self.session.commit()
+        else:
+            favorite.like = like
+            self.session.commit()
+
+    def get_next_profile(self, client: Client):
+        if client.currentSearchID == None: # если первый раз то просто запрос
+            item = self.session.query(SearchResult) \
+                .filter(SearchResult.clientID == client.id) \
+                .filter(~ exists().where(
+                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False))
+        else:
+            #выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
+            item = self.session.query(SearchResult) \
+                .filter(SearchResult.clientID == client.id) \
+                .where(SearchResult.id > client.currentSearchID) \
+                .filter(~ exists()\
+                        .where(SearchResult.id == Favorite.SearchID \
+                               and Favorite.ClientID == client.id \
+                               and Favorite.like == False)) \
+                .first()
+        self.set_searchID(client=client, id=item.id)
+        return {'fio': item.fio,
+                'profile': f"https://vk.com/id{item.vkID}",
+                "img1": item.img1,
+                "img2": item.img2,
+                "img3": item.img3, }

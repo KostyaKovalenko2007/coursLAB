@@ -8,6 +8,7 @@ from db import Client, SearchResult, Favorite, BotDB
 from os import getenv
 
 
+
 class vkBOT():
     session = None
     api = None
@@ -22,6 +23,13 @@ class vkBOT():
         self.vk = self.session.get_api()
         self.api = self.session.get_api()
         self.priv_api = vk_api.VkApi(token=getenv('priv_token')).get_api()
+        self.upload = vk_api.VkUpload(self.session)
+
+    def send_profile(self,user_id,profile:dict,keyboard):
+        print(profile.get('fio'),profile.get('img1'))
+        #pic1 = self.upload.photo_messages(profile.get('img1'))
+        pic1 = self.upload.photo_messages("/Users/air/Downloads/VzazMS50ug4.jpeg", peer_id=64049236)
+        print(pic1)
 
     def write_msg(self, user_id, message, keyboard=None):
         post = {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7)}
@@ -68,23 +76,12 @@ class vkBOT():
 
     def get_next_in_searchResults(self, ClientID):
         # возвращает следующий профиль из поисковых результатов
+        return self.db.get_next_profile(client=self.db.get_client_by_vkID(vkID=ClientID))
 
-        client = self.db.get_client_by_vkID(vkID=ClientID)
-        if client.currentSearchID == None:
-            item = self.db.session.query(SearchResult).filter(
-                SearchResult.clientID == client.id).first()
-        else:
-            item = self.db.session.query(SearchResult).filter(
-                SearchResult.clientID == client.id).where(SearchResult.id > client.currentSearchID).first()
-        self.db.set_searchID(ClientID=client.vkID, id=item.id)
-        return {'fio': item.fio,
-                'profile': f"https://vk.com/id{item.vkID}",
-                "img1": item.img1,
-                "img2": item.img2,
-                "img3": item.img3, }
 
     def set_like_dislike(self, clientID, like=False):
-
+        client = self.db.get_client_by_vkID(vkID=clientID)
+        self.db.set_like(client=client,like=like)
         pass
 
     def run(self):
@@ -110,7 +107,7 @@ class vkBOT():
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.write_msg(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id), keyboard)
+                        self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id), keyboard)
                     elif request == "Регистрация":
                         self.register_client_profile(user_id=event.user_id)
                         info = self.db.get_client_criterias(vkID=str(event.user_id))
@@ -129,7 +126,19 @@ class vkBOT():
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.write_msg(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id)['fio'], keyboard)
+                        self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id), keyboard)
+                    elif request == "Нравится":
+                        keyboard = VkKeyboard(inline=True)
+                        keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
+                        keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
+                        keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
+                        self.set_like_dislike(clientID=event.user_id,like=True )
+                    elif request == "Не нравится":
+                        keyboard = VkKeyboard(inline=True)
+                        keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
+                        keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
+                        keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
+                        self.set_like_dislike(clientID=event.user_id,like=False )
                     else:
                         self.write_msg(event.user_id, "Команда не распознана начните с команды 'start'")
 
@@ -137,6 +146,7 @@ class vkBOT():
         photo_dict = {}
         try:
             for photo in self.priv_api.photos.get(owner_id=vkID, album_id='profile', extended=1)['items']:
+                print(photo)
                 photo_dict[photo['sizes'][-1]['url']] = photo['likes']['count']
             return sorted(photo_dict, key=lambda x: x[1], reverse=True)[
                    :3]  # sorted list of photo by Likes, limited by to 3
@@ -150,3 +160,4 @@ if __name__ == '__main__':
     # bd.create_tables() # раскоментировать для инициализации базы
     vkbot = vkBOT(bd)
     vkbot.run()
+    #vkbot.get_user_photos(vkID=64049236)
