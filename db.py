@@ -133,12 +133,16 @@ class BotDB():
             .filter(~ exists().where(SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id)) \
             .delete()
         for profile in SearchResults:
-            item = SearchResult(ClientID=client.id,
-                                vkID=str(profile['id']),
-                                fio=f'{profile["first_name"]} {profile["last_name"]}',
-                                imgs=list(profile['photos'])
-                                )
-            self.session.add(item)
+            if self.session.query(SearchResult) \
+                    .filter(SearchResult.clientID == client.id) \
+                    .where(SearchResult.vkID == str(profile['id'])) \
+                    .first() is None:
+                item = SearchResult(ClientID=client.id,
+                                    vkID=str(profile['id']),
+                                    fio=f'{profile["first_name"]} {profile["last_name"]}',
+                                    imgs=list(profile['photos'])
+                                    )
+                self.session.add(item)
         self.session.commit()
         pass
 
@@ -159,18 +163,18 @@ class BotDB():
             self.session.commit()
 
     def get_next_profile(self, client: Client):
-        if client.currentSearchID == None: # если первый раз то просто запрос
+        if client.currentSearchID == None:  # если первый раз то просто запрос
             item = self.session.query(SearchResult) \
                 .filter(SearchResult.clientID == client.id) \
                 .filter(~ exists().where(
-                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False))\
+                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False)) \
                 .first()
         else:
-            #выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
+            # выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
             item = self.session.query(SearchResult) \
                 .filter(SearchResult.clientID == client.id) \
                 .where(SearchResult.id > client.currentSearchID) \
-                .filter(~ exists()\
+                .filter(~ exists() \
                         .where(SearchResult.id == Favorite.SearchID \
                                and Favorite.ClientID == client.id \
                                and Favorite.like == False)) \

@@ -4,9 +4,9 @@ import vk_api
 import json
 from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor, VkKeyboardButton
-from db import Client, SearchResult, Favorite, BotDB
+from db import BotDB
 from os import getenv
-
+import requests
 
 
 class vkBOT():
@@ -24,13 +24,32 @@ class vkBOT():
         self.vk = self.session.get_api()
         self.api = self.session.get_api()
         self.priv_api = vk_api.VkApi(token=getenv('priv_token')).get_api()
-        self.upload = vk_api.VkUpload(self.session)
+        self.upload = vk_api.VkUpload(vk_api.VkApi(token=getenv('priv_token')))
 
-    def send_profile(self,user_id,profile:dict,keyboard):
-        print(profile.get('fio'),profile.get('img1'))
-        #pic1 = self.upload.photo_messages("/Users/air/Downloads/VzazMS50ug4.jpeg", peer_id=64049236)
-        #print(pic1)
-        self.write_msg(user_id=user_id,message=f"{profile.get('fio')}\n{profile.get('img1')}",keyboard=keyboard)
+    def send_profile(self, user_id, profile: dict, keyboard):
+        fotos = []
+        if profile.get('img1') != None:
+            fotos.append(profile.get('img1'))
+        if profile.get('img2') != None:
+            fotos.append(profile.get('img2'))
+        if profile.get('img3') != None:
+            fotos.append(profile.get('img3'))
+        message = f"{profile.get('fio')} {profile.get('profile')}"
+
+        attachments = []
+        session = requests.Session()
+        for foto in fotos:
+            try:
+                image = session.get(foto, stream=True)
+                photo = self.upload.photo_messages(photos=image.raw)[0]
+                attachments.append('photo{}_{}_{}'.format(photo['owner_id'], photo['id'], photo['access_key']))
+            except:
+                pass
+        post = {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7),
+                'attachment': ','.join(attachments)}
+        if keyboard:
+            post["keyboard"] = keyboard.get_keyboard()
+        self.session.method('messages.send', post)
 
     def write_msg(self, user_id, message, keyboard=None):
         post = {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7)}
@@ -56,7 +75,7 @@ class vkBOT():
         if bot_user['bdate'] != None:
             bot_user_bdate = bot_user['bdate'].split('.')
         else:
-            bot_user_bdate=[1,1,2000]
+            bot_user_bdate = [1, 1, 2000]
 
         # Укажем критерии поиска людей +/-10 лет, если указан возраст
         if len(bot_user_bdate) == 3:
@@ -100,10 +119,9 @@ class vkBOT():
         # возвращает следующий профиль из поисковых результатов
         return self.db.get_next_profile(client=self.db.get_client_by_vkID(vkID=ClientID))
 
-
     def set_like_dislike(self, clientID, like=False):
         client = self.db.get_client_by_vkID(vkID=clientID)
-        self.db.set_like(client=client,like=like)
+        self.db.set_like(client=client, like=like)
         pass
 
     def run(self):
@@ -129,9 +147,10 @@ class vkBOT():
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id), keyboard)
+                        self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id),
+                                          keyboard)
                     elif request == "Регистрация":
-                        res , msg = self.register_client_profile(user_id=event.user_id)
+                        res, msg = self.register_client_profile(user_id=event.user_id)
                         if res:
                             info = self.db.get_client_criterias(vkID=str(event.user_id))
                             keyboard = VkKeyboard()
@@ -158,19 +177,20 @@ class vkBOT():
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id), keyboard)
+                        self.send_profile(event.user_id, self.get_next_in_searchResults(ClientID=event.user_id),
+                                          keyboard)
                     elif request == "Нравится":
                         keyboard = VkKeyboard(inline=True)
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.set_like_dislike(clientID=event.user_id,like=True )
+                        self.set_like_dislike(clientID=event.user_id, like=True)
                     elif request == "Не нравится":
                         keyboard = VkKeyboard(inline=True)
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.set_like_dislike(clientID=event.user_id,like=False )
+                        self.set_like_dislike(clientID=event.user_id, like=False)
                     else:
                         self.write_msg(event.user_id, "Команда не распознана начните с команды 'start'")
 
@@ -189,7 +209,7 @@ class vkBOT():
 
 if __name__ == '__main__':
     bd = BotDB()
-    bd.create_tables() # раскоментировать для инициализации базы
+    bd.create_tables()  # раскоментировать для инициализации базы
     vkbot = vkBOT(bd)
     vkbot.run()
-    #vkbot.get_user_photos(vkID=64049236)
+    # vkbot.get_user_photos(vkID=64049236)
