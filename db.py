@@ -191,3 +191,10 @@ class BotDB():
                 "img1": item.img1,
                 "img2": item.img2,
                 "img3": item.img3, }
+
+
+    def get_like_profiles(self, client: Client):
+        items = self.session.query(SearchResult).filter(SearchResult.clientID == client.id) \
+            .where(SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id \
+                           and Favorite.like == True)
+        return items
