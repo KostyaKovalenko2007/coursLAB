@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON, exists, inspect
+from sqlalchemy import Column, Integer, String, create_engine, ForeignKey, Boolean, JSON, exists, inspect, and_
 from sqlalchemy.orm import sessionmaker, declarative_base, Query
 # from os import getenv
 import json
@@ -18,7 +18,7 @@ class Client(Base):
     def __init__(self, client_id: str, creteria: json):
         self.vkID = client_id
         self.creteria = creteria
-        self.currentSearchID
+        self.currentSearchID = None
 
     def __repr__(self):
         return f'<{self.__class__.__name__} #{self.id}>'
@@ -130,7 +130,7 @@ class BotDB():
         self.session.commit()
         self.session.query(SearchResult) \
             .filter(SearchResult.clientID == client.id) \
-            .filter(~ exists().where(SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id)) \
+            .filter(~ exists().where(and_(SearchResult.id == Favorite.SearchID, Favorite.ClientID == client.id))) \
             .delete()
         for profile in SearchResults:
             if self.session.query(SearchResult) \
@@ -167,8 +167,12 @@ class BotDB():
             item = self.session.query(SearchResult) \
                 .filter(SearchResult.clientID == client.id) \
                 .filter(~ exists().where(
-                SearchResult.id == Favorite.SearchID and Favorite.ClientID == client.id and Favorite.like == False)) \
-                .first()
+                            and_(
+                                SearchResult.id == Favorite.SearchID,
+                                Favorite.ClientID == client.id ,
+                                Favorite.like == False)
+                                        )
+                        ).first()
         else:
             # выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
             item = self.session.query(SearchResult) \
@@ -188,13 +192,19 @@ class BotDB():
     def get_like_list(self, client:Client):
         out = []
         if client != None:
-            for profile in self.session.query(SearchResult)\
-                .filter(SearchResult.clientID == client.id)\
-                .filter(exists()\
-                        .where(SearchResult.id == Favorite.SearchID and
-                               Favorite.ClientID==client.id and
-                               Favorite.like==True)):
-                out.append({"id":profile.id,"fio":profile.fio,"vkID":profile.vkID})
+            q = self.session.query(SearchResult) \
+                .filter(SearchResult.clientID == client.id) \
+                .filter(exists() \
+                        .where(and_(SearchResult.id == Favorite.SearchID,
+                                   Favorite.ClientID == client.id,
+                                   Favorite.like == True)
+                            ))
+            for profile in q:
+                out.append({'fio': profile.fio,
+                'profile': f"https://vk.com/id{profile.vkID}",
+                "img1": profile.img1,
+                "img2": profile.img2,
+                "img3": profile.img3, })
             pass
         else:
             return None
