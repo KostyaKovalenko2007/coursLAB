@@ -185,3 +185,24 @@ class BotDB():
                 "img1": item.img1,
                 "img2": item.img2,
                 "img3": item.img3, }
+    def get_like_list(self, client:Client):
+        out = []
+        if client != None:
+            for profile in self.session.query(SearchResult)\
+                .filter(SearchResult.clientID == client.id)\
+                .filter(exists()\
+                        .where(SearchResult.id == Favorite.SearchID and
+                               Favorite.ClientID==client.id and
+                               Favorite.like==True)):
+                out.append({"id":profile.id,"fio":profile.fio,"vkID":profile.vkID})
+            pass
+        else:
+            return None
+        return out
+    def get_serchResult_by_ID(self,id:int):
+        item = self.session.query(SearchResult).filter(SearchResult.id == id).first()
+        return {'fio': item.fio,
+                'profile': f"https://vk.com/id{item.vkID}",
+                "img1": item.img1,
+                "img2": item.img2,
+                "img3": item.img3, }

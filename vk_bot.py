@@ -119,11 +119,14 @@ class vkBOT():
         # возвращает следующий профиль из поисковых результатов
         return self.db.get_next_profile(client=self.db.get_client_by_vkID(vkID=ClientID))
 
+    def get_profile_by_searchID(self,id:int):
+        pass
+
     def set_like_dislike(self, clientID, like=False):
         client = self.db.get_client_by_vkID(vkID=clientID)
         self.db.set_like(client=client, like=like)
         pass
-
+#TODO  Вывести список избранных людей.
     def run(self):
         for event in self.longpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW:

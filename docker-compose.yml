@@ -17,6 +17,8 @@ services:
       POSTGRES_USER: vk_bot_lab
       POSTGRES_PASSWORD: Qw123456
       PGDATA: /data/postgres
+    ports:
+      - "5432:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U vk_bot_lab -d vkbot" ]
       interval: 5s
