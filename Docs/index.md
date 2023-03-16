@@ -41,7 +41,7 @@
 
 ## Структура данных:
 
-![DB_SCHEMA.svg](assets/DB_SCHEMA.svg)
+![DB_SCHEMA.svg](./DB_SCHEMA.svg)
 
 ### Описание таблиц
 
