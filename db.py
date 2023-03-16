@@ -167,11 +167,11 @@ class BotDB():
             item = self.session.query(SearchResult) \
                 .filter(SearchResult.clientID == client.id) \
                 .filter(~ exists().where(
-                            and_(
-                                SearchResult.id == Favorite.SearchID,
-                                Favorite.ClientID == client.id ,
-                                Favorite.like == False)
-                                        )
+                and_(
+                    SearchResult.id == Favorite.SearchID,
+                    Favorite.ClientID == client.id,
+                    Favorite.like == False)
+            )
                         ).first()
         else:
             # выборка из поисковой таблици с ID больше чем в профиле и  исключаем тех что в лайках
@@ -189,27 +189,29 @@ class BotDB():
                 "img1": item.img1,
                 "img2": item.img2,
                 "img3": item.img3, }
-    def get_like_list(self, client:Client):
+
+    def get_like_list(self, client: Client):
         out = []
         if client != None:
             q = self.session.query(SearchResult) \
                 .filter(SearchResult.clientID == client.id) \
                 .filter(exists() \
                         .where(and_(SearchResult.id == Favorite.SearchID,
-                                   Favorite.ClientID == client.id,
-                                   Favorite.like == True)
-                            ))
+                                    Favorite.ClientID == client.id,
+                                    Favorite.like == True)
+                               ))
             for profile in q:
                 out.append({'fio': profile.fio,
-                'profile': f"https://vk.com/id{profile.vkID}",
-                "img1": profile.img1,
-                "img2": profile.img2,
-                "img3": profile.img3, })
+                            'profile': f"https://vk.com/id{profile.vkID}",
+                            "img1": profile.img1,
+                            "img2": profile.img2,
+                            "img3": profile.img3, })
             pass
         else:
             return None
         return out
-    def get_serchResult_by_ID(self,id:int):
+
+    def get_serchResult_by_ID(self, id: int):
         item = self.session.query(SearchResult).filter(SearchResult.id == id).first()
         return {'fio': item.fio,
                 'profile': f"https://vk.com/id{item.vkID}",

@@ -10,7 +10,7 @@ import requests
 
 
 class vkBOT():
-    #test changes
+    # test changes
     session = None
     api = None
     db: BotDB = None
@@ -88,8 +88,8 @@ class vkBOT():
             bot_user['age_to'] = 40
 
         return self.db.create_client(vkID=user_id, creteria=json.dumps(bot_user))
-        #print(msg)
-        #return result, msg
+        # print(msg)
+        # return result, msg
 
     def search_by_client_criteria(self, Client_id):
         # делает выборку/поиск из VK, результат кладет в базу
@@ -119,16 +119,17 @@ class vkBOT():
         # возвращает следующий профиль из поисковых результатов
         return self.db.get_next_profile(client=self.db.get_client_by_vkID(vkID=ClientID))
 
-    def get_favorite(self,user_id,keyboard):
+    def get_favorite(self, user_id, keyboard):
         for profile in self.db.get_like_list(client=self.db.get_client_by_vkID(vkID=user_id)):
-            self.send_profile(user_id=user_id,profile=profile, keyboard=keyboard)
+            self.send_profile(user_id=user_id, profile=profile, keyboard=keyboard)
         pass
 
     def set_like_dislike(self, clientID, like=False):
         client = self.db.get_client_by_vkID(vkID=clientID)
         self.db.set_like(client=client, like=like)
         pass
-#TODO  Вывести список избранных людей.
+
+    # TODO  Вывести список избранных людей.
     def run(self):
         for event in self.longpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW:
@@ -146,7 +147,7 @@ class vkBOT():
                         keyboard.add_button("Нравится", VkKeyboardColor.POSITIVE)
                         keyboard.add_button("Не нравится", VkKeyboardColor.NEGATIVE)
                         keyboard.add_button("Следующее", VkKeyboardColor.PRIMARY)
-                        self.get_favorite(user_id=event.user_id,keyboard=keyboard)
+                        self.get_favorite(user_id=event.user_id, keyboard=keyboard)
                     elif request == "Поиск":
                         self.search_by_client_criteria(Client_id=event.user_id)
                         keyboard = VkKeyboard(inline=True)
@@ -157,7 +158,7 @@ class vkBOT():
                                           keyboard)
                     elif request == "Регистрация":
                         (res, msg) = self.register_client_profile(user_id=event.user_id)
-                        #print(self.register_client_profile(user_id=event.user_id))
+                        # print(self.register_client_profile(user_id=event.user_id))
                         if res:
                             info = self.db.get_client_criterias(vkID=str(event.user_id))
                             keyboard = VkKeyboard()
